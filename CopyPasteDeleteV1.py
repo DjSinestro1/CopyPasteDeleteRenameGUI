@@ -21,7 +21,7 @@ from watchdog.events import FileSystemEventHandler
 class FileCopyHandler(FileSystemEventHandler):
     def __init__(self, source_dir, destination_dirs, wait_time=5, max_retries=3):
         self.source_dir = source_dir
-        self.destination_dirs = [d for d in destination_dirs if d.strip()]  # Filter empty paths
+        self.destination_dirs = [d for d in destination_dirs if d.strip()] # Filter empty paths
         self.wait_time = wait_time
         self.max_retries = max_retries
 
@@ -53,7 +53,6 @@ class FileCopyHandler(FileSystemEventHandler):
             if not self.wait_for_file_ready(source_path):
                 print(f"File {source_path} not ready after multiple attempts")
                 return
-
             relative_path = os.path.relpath(source_path, self.source_dir)
             for dest_dir in self.destination_dirs:
                 try:
@@ -63,6 +62,19 @@ class FileCopyHandler(FileSystemEventHandler):
                     print(f"Successfully copied {relative_path} to {full_dest_path}")
                 except Exception as e:
                     print(f"Error copying {relative_path} to {dest_dir}: {e}")
+
+    def on_deleted(self, event):
+        if not event.is_directory:
+            source_path = event.src_path
+            relative_path = os.path.relpath(source_path, self.source_dir)
+            for dest_dir in self.destination_dirs:
+                try:
+                    full_dest_path = os.path.join(dest_dir, relative_path)
+                    if os.path.exists(full_dest_path):
+                        os.remove(full_dest_path)
+                        print(f"Deleted {relative_path} from {dest_dir}")
+                except Exception as e:
+                    print(f"Error deleting {relative_path} from {dest_dir}: {e}")
 
 def browse_directory(entry_widget):
     directory = filedialog.askdirectory()
@@ -79,15 +91,17 @@ def start_monitoring():
             entry_target_directory_3.get(),
             entry_target_directory_4.get(),
             entry_target_directory_5.get()
-        ] if dir_path.strip()  # Only include non-empty directory paths
+        ] if dir_path.strip() # Only include non-empty directory paths
     ]
 
     if not os.path.isdir(source_directory):
         messagebox.showerror("Error", "Please select a valid source directory.")
         return
+
     if not destination_directories:
         messagebox.showerror("Error", "Please select at least one target directory.")
         return
+
     for target_directory in destination_directories:
         if not os.path.isdir(target_directory):
             messagebox.showerror("Error", f"Please select a valid target directory: {target_directory}.")
@@ -114,7 +128,7 @@ def start_monitoring():
             time.sleep(1)
     except KeyboardInterrupt:
         observer.stop()
-        observer.join()
+    observer.join()
 
 # Create the main window
 root = tk.Tk()
